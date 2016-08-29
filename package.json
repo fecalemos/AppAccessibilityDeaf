@@ -1,0 +1,13 @@
+{
+  "name": "app-accessibility-deaf",
+  "version": "0.0.1",
+  "description": "web speech api with websocket",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.10.2",
+    "socket.io": "^1.4.6"
+  }
+}
