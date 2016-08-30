@@ -15,3 +15,16 @@ var port = process.env.PORT || 5001;
 var server = app.listen(port, function() {
     console.log('listening on *:' + port);
 });
+
+// socket.io to communication between the users
+var io = require('socket.io')(server);
+
+io.on('connection', function(socket){
+
+  socket.on('speech', function(data) {
+    console.log('msg: ' + data.msg);
+    io.sockets.emit('speech', {
+      msg: data.msg
+    });
+  });
+});
