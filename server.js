@@ -1,64 +1,64 @@
-// server.js
+const express = require('express')
+const bodyParser = require('body-parser')
+const session = require('express-session')
+const FileStore = require('session-file-store')(session)
+const next = require('next')
+const admin = require('firebase-admin')
 
-// set up ======================================================================
-// get all the tools we need
-var express  = require('express');
-var app      = express();
-var port     = process.env.PORT || 8080;
-var mongoose = require('mongoose');
-var passport = require('passport');
-var flash    = require('connect-flash');
+const port = parseInt(process.env.PORT, 10) || 3000
+const dev = process.env.NODE_ENV !== 'production'
+const app = next({ dev })
+const handle = app.getRequestHandler()
 
-var morgan       = require('morgan');
-var cookieParser = require('cookie-parser');
-var bodyParser   = require('body-parser');
-var session      = require('express-session');
+const firebase = admin.initializeApp({
+  credential: admin.credential.cert(require('./credentials/server')),
+  databaseURL: 'https://app-accessibility-deaf-a5943.firebaseio.com'
+}, 'server')
 
-var configDB = require('./config/database.js');
+app.prepare()
+.then(() => {
+  const server = express()
 
-// configuration ===============================================================
-mongoose.connect(configDB.url); // connect to our database
+  server.use(bodyParser.json())
+  server.use(session({
+    secret: 'geheimnis',
+    saveUninitialized: true,
+    store: new FileStore({path: '/tmp/sessions', secret: 'geheimnis'}),
+    resave: false,
+    rolling: true,
+    httpOnly: true,
+    cookie: { maxAge: 604800000 } // week
+  }))
 
-require('./config/passport')(passport); // pass passport for configuration
+  server.use((req, res, next) => {
+    req.firebaseServer = firebase
+    next()
+  })
 
-// set up our express application
-app.use(morgan('dev')); // log every request to the console
-app.use(cookieParser()); // read cookies (needed for auth)
-app.use(bodyParser.json()); // get information from html forms
-app.use(bodyParser.urlencoded({ extended: true }));
+  server.post('/api/login', (req, res) => {
+    if (!req.body) return res.sendStatus(400)
 
-app.set('view engine', 'ejs'); // set up ejs for templating
-app.use(express.static('app'));
-app.use("/css", express.static(__dirname + '/app/css'));
-app.use("/img", express.static(__dirname + '/app/img'));
-app.use("/js", express.static(__dirname + '/app/js'));
+    const token = req.body.token
+    firebase.auth().verifyIdToken(token)
+      .then((decodedToken) => {
+        req.session.decodedToken = decodedToken
+        return decodedToken
+      })
+      .then((decodedToken) => res.json({ status: true, decodedToken }))
+      .catch((error) => res.json({ error }))
+  })
 
-// required for passport
-app.use(session({
-    secret: 'ilovescotchscotchyscotchscotch', // session secret
-    resave: true,
-    saveUninitialized: true
-}));
-app.use(passport.initialize());
-app.use(passport.session()); // persistent login sessions
-app.use(flash()); // use connect-flash for flash messages stored in session
+  server.post('/api/logout', (req, res) => {
+    req.session.decodedToken = null
+    res.json({ status: true })
+  })
 
-// routes ======================================================================
-require('./app/routes.js')(app, passport); // load our routes and pass in our app and fully configured passport
+  server.get('*', (req, res) => {
+    return handle(req, res)
+  })
 
-// launch ======================================================================
-var server = app.listen(port, function(){
-  console.log('Listening on port ' + port);
-});
-
-// socket.io to communication between the users
-var io = require('socket.io')(server);
-
-io.on('connection', function(socket){
-
-  socket.on('speech', function(data) {
-    io.sockets.emit('speech', {
-      msg: data.msg
-    });
-  });
-});
+  server.listen(port, (err) => {
+    if (err) throw err
+    console.log(`> Ready on http://localhost:${port}`)
+  })
+})

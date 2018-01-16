@@ -1,18 +1,6 @@
-lib-cov
-*.seed
-*.log
-*.csv
-*.dat
-*.out
-*.pid
-*.gz
-
-pids
-logs
-results
-
+.next
 npm-debug.log
 node_modules
 
-config/database.js
-config/auth.js
+credentials/client.js
+credentials/server.js
