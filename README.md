@@ -7,8 +7,8 @@
 Download the example [or clone the repo](https://github.com/fecalemos/AppAccessibilityDeaf):
 
 ```bash
-curl https://codeload.github.com/zeit/next.js/tar.gz/master | tar -xz --strip=2 next.js-master/examples/with-firebase-authentication
-cd with-firebase
+curl https://github.com/fecalemos/AppAccessibilityDeaf/archive/master.zip
+cd AppAccessibilityDeaf
 ```
 
 Set up firebase:
